@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spanner – panorama carousel maker</title>
+<style>
+:root{--bg:#eceef2;--surface:#fff;--ink:#1c1d22;--mute:#666b78;--line:#d3d6de;--acc:#2f5bff;--accink:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15161a;--surface:#1f2026;--ink:#eceef2;--mute:#9aa0ae;--line:#34363f;--acc:#7b97ff;--accink:#10131f}}
+:root[data-theme="dark"]{--bg:#15161a;--surface:#1f2026;--ink:#eceef2;--mute:#9aa0ae;--line:#34363f;--acc:#7b97ff;--accink:#10131f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:4px 0 2px;letter-spacing:-.02em}
+.sub,.hint{color:var(--mute);margin:0 0 12px}.hint{font-size:.9rem;margin:8px 0}
+.stage{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.wrap{position:relative;display:inline-block;line-height:0}
+#c{touch-action:none;display:block;height:min(52vh,460px);box-shadow:0 0 0 1px var(--line)}
+.guides{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right,transparent calc(100% - 2px),var(--acc) 0)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:10px 0}
+.row h2{flex-basis:100%;margin:0;font-size:.95rem}
+label{display:flex;flex-direction:column;font-size:.8rem;color:var(--mute);gap:3px}
+select,input[type=color]{height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;padding:0 8px}
+input[type=range]{width:150px;height:44px;accent-color:var(--acc)}
+button,.btn{height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
+button:disabled{opacity:.4;cursor:default}
+.primary{background:var(--acc)!important;color:var(--accink)!important;border-color:var(--acc)!important}
+button:focus-visible,.btn:focus-within,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+#out{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
+#out figure{margin:0}#out img{width:100%;border-radius:8px;border:1px solid var(--line);display:block}
+#out figcaption{font-size:.85rem;color:var(--mute);margin-top:4px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);max-width:96vw;padding:14px}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+#cc{touch-action:none;display:block;margin:0 auto 10px;max-width:100%}
+.chips button{height:38px;padding:0 12px;font-weight:500}
+.chips button[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.nav{display:flex;align-items:center;gap:10px;margin:8px 0}.nav span{flex:1;text-align:center;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>Spanner</h1>
+<p class="sub">Lay photos across several slides so they connect when someone swipes.</p>
+
+<div class="stage" id="stage"><div class="wrap"><canvas id="c"></canvas><div class="guides" id="g"></div></div></div>
+<div class="nav"><button id="prev" aria-label="Previous slide">&lt; Previous</button><span id="ind">Slide 1 of 4</span><button id="next" aria-label="Next slide">Next &gt;</button></div>
+<p class="hint">Drag a photo to move it. Drag empty space, or use Previous and Next, to change slide. Hold a photo near the screen edge to carry it to the next slide.</p>
+
+<div class="row">
+  <button id="add" type="button" class="primary">Add photos</button><input id="f" type="file" accept="image/*" multiple tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+  <label>Slides<select id="n"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>8</option><option>10</option></select></label>
+  <label>Slide shape<select id="r">
+    <option value="1350">4:5 portrait · 1080×1350</option><option value="1080">1:1 square · 1080×1080</option>
+    <option value="1440">3:4 portrait · 1080×1440</option><option value="1920">9:16 story · 1080×1920</option>
+    <option value="608">16:9 landscape · 1080×608</option></select></label>
+  <label>Background<input id="bg" type="color" value="#ffffff"></label>
+</div>
+
+<div class="row">
+  <h2>Selected photo</h2>
+  <button id="crop" disabled>Crop</button>
+  <button id="fw" disabled>Fit width</button>
+  <button id="fh" disabled>Fill height</button>
+  <button id="sp" disabled>Span 2 slides</button>
+  <label>Size<input id="sz" type="range" min="10" max="300" value="100" disabled></label>
+  <button id="fwd" disabled>Bring to front</button>
+  <button id="del" disabled>Remove</button>
+</div>
+
+<div class="row">
+  <label>Quality<select id="q"><option value="1">Standard · 1080 wide</option><option value="2" selected>High · 2160 wide</option></select></label>
+  <button id="exp">Preview slides</button>
+  <button id="all" class="primary">Save to device</button>
+  <button id="shr" hidden>Save to Photos / Share</button>
+</div>
+<p class="hint" id="msg" aria-live="polite"></p>
+<div id="out" aria-live="polite"></div>
+
+<dialog id="dlg">
+  <canvas id="cc"></canvas>
+  <div class="chips row" id="chips">
+    <button data-r="0" aria-pressed="true">Free</button><button data-r="o">Original</button>
+    <button data-r="1">1:1</button><button data-r="0.8">4:5</button><button data-r="0.75">3:4</button>
+    <button data-r="0.5625">9:16</button><button data-r="1.7778">16:9</button><button data-r="1.5">3:2</button>
+  </div>
+  <div class="row"><button id="creset">Reset</button><button id="ccancel">Cancel</button><button id="capply" class="primary">Apply crop</button></div>
+</dialog>
+</main>
+<script>
+const FW=1080;let FH=1350,N=4,items=[],sel=null,drag=null,pan=null,dirty=true,blobs=[];
+const c=document.getElementById('c'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+function setup(){c.width=N*FW;c.height=FH;$('g').style.backgroundSize=(100/N)+'% 100%';draw()}
+function draw(exp){if(!exp)dirty=true;x.fillStyle=$('bg').value;x.fillRect(0,0,c.width,c.height);
+ for(const t of items)x.drawImage(t.img,t.sx,t.sy,t.sw,t.sh,t.x,t.y,t.w,t.h);
+ if(!exp&&sel){x.strokeStyle='#2f5bff';x.lineWidth=6;x.strokeRect(sel.x,sel.y,sel.w,sel.h)}}
+function pos(e,el){const r=el.getBoundingClientRect();return{x:(e.clientX-r.left)*el.width/r.width,y:(e.clientY-r.top)*el.height/r.height}}
+function ctl(){const on=!!sel;['sz','fwd','del','crop','fw','fh','sp'].forEach(i=>$(i).disabled=!on);if(on)$('sz').value=Math.round(sel.w/sel.base*100)}
+c.addEventListener('pointerdown',e=>{const p=pos(e,c);sel=null;
+ for(let i=items.length-1;i>=0;i--){const t=items[i];if(p.x>=t.x&&p.x<=t.x+t.w&&p.y>=t.y&&p.y<=t.y+t.h){sel=t;drag={dx:p.x-t.x,dy:p.y-t.y};c.setPointerCapture(e.pointerId);break}}
+ if(!sel){pan={cx:e.clientX,sl:$('stage').scrollLeft};c.setPointerCapture(e.pointerId)}
+ if(drag){drag.cx=e.clientX;drag.cy=e.clientY;requestAnimationFrame(autoscroll)}
+ ctl();draw()});
+function autoscroll(){if(!drag||!sel)return;const st=$('stage'),r=st.getBoundingClientRect();let d=0;
+ if(drag.cx>r.right-48)d=14;else if(drag.cx<r.left+48)d=-14;
+ if(d){st.scrollLeft+=d;const p=pos({clientX:drag.cx,clientY:drag.cy},c);sel.x=p.x-drag.dx;sel.y=p.y-drag.dy;draw()}
+ requestAnimationFrame(autoscroll)}
+c.addEventListener('pointermove',e=>{if(pan){const st=$('stage');st.scrollLeft=pan.sl-(e.clientX-pan.cx);return}
+ if(!drag||!sel)return;drag.cx=e.clientX;drag.cy=e.clientY;const p=pos(e,c);sel.x=p.x-drag.dx;sel.y=p.y-drag.dy;draw()});
+c.addEventListener('pointerup',()=>{drag=null;pan=null});
+c.addEventListener('pointercancel',()=>{drag=null;pan=null});
+$('add').onclick=()=>$('f').click();
+$('f').onchange=e=>{for(const f of e.target.files){const img=new Image();img.onerror=()=>{$('msg').textContent='Couldn’t open '+f.name+'. Try a JPG, PNG or WebP photo; HEIC isn’t supported in every browser.'};img.onload=()=>{$('msg').textContent='';
+ const w=FW*.86,iw=img.naturalWidth,ih=img.naturalHeight,h=w*ih/iw,k=items.length%N;
+ const t={img,sx:0,sy:0,sw:iw,sh:ih,w,h,base:w,x:k*FW+(FW-w)/2,y:(FH-h)/2};items.push(t);sel=t;ctl();draw()};const fr=new FileReader();fr.onload=()=>{img.src=fr.result};fr.readAsDataURL(f)}e.target.value=''};
+function resize(t,w){const cx=t.x+t.w/2,cy=t.y+t.h/2,r=t.sh/t.sw;t.w=w;t.h=w*r;t.x=cx-t.w/2;t.y=cy-t.h/2;t.base=w;ctl();draw()}
+$('sz').oninput=e=>{if(!sel)return;const b=sel.base;resize(sel,b*e.target.value/100);sel.base=b};
+$('fw').onclick=()=>{const f=Math.min(N-1,Math.max(0,Math.floor((sel.x+sel.w/2)/FW)));resize(sel,FW);sel.x=f*FW;draw()};
+$('fh').onclick=()=>{resize(sel,FH*sel.sw/sel.sh);draw()};
+$('sp').onclick=()=>{const f=Math.min(N-2,Math.max(0,Math.floor((sel.x+sel.w/2)/FW)));resize(sel,FW*2);sel.x=f*FW;draw()};
+$('fwd').onclick=()=>{items=items.filter(t=>t!==sel);items.push(sel);draw()};
+$('del').onclick=()=>{items=items.filter(t=>t!==sel);sel=null;ctl();draw()};
+$('n').onchange=e=>{N=+e.target.value;setup()};
+$('r').onchange=e=>{FH=+e.target.value;setup()};
+$('bg').oninput=()=>draw();
+
+/* ---- crop ---- */
+const dlg=$('dlg'),cv=$('cc'),cx=cv.getContext('2d');let cs=1,cr,R=0,cd=null,IW,IH;
+function chip(v){document.querySelectorAll('#chips button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r==v))}
+$('crop').onclick=()=>{const im=sel.img;IW=im.naturalWidth;IH=im.naturalHeight;
+ cs=Math.min(innerWidth*.86/IW,innerHeight*.5/IH);cv.width=Math.round(IW*cs);cv.height=Math.round(IH*cs);
+ cr={x:sel.sx,y:sel.sy,w:sel.sw,h:sel.sh};R=0;chip(0);dlg.showModal();cdraw()};
+function cdraw(){const W=cv.width,H=cv.height,im=sel.img;cx.clearRect(0,0,W,H);cx.drawImage(im,0,0,W,H);
+ cx.fillStyle='rgba(0,0,0,.55)';cx.fillRect(0,0,W,H);
+ cx.drawImage(im,cr.x,cr.y,cr.w,cr.h,cr.x*cs,cr.y*cs,cr.w*cs,cr.h*cs);
+ const X=cr.x*cs,Y=cr.y*cs,w=cr.w*cs,h=cr.h*cs;cx.strokeStyle='#fff';cx.lineWidth=2;cx.strokeRect(X,Y,w,h);
+ cx.lineWidth=1;cx.globalAlpha=.5;for(let i=1;i<3;i++){cx.beginPath();cx.moveTo(X+w*i/3,Y);cx.lineTo(X+w*i/3,Y+h);cx.moveTo(X,Y+h*i/3);cx.lineTo(X+w,Y+h*i/3);cx.stroke()}
+ cx.globalAlpha=1;cx.fillStyle='#2f5bff';for(const[a,b]of corners())cx.fillRect(a*cs-8,b*cs-8,16,16)}
+function corners(){return[[cr.x,cr.y],[cr.x+cr.w,cr.y],[cr.x,cr.y+cr.h],[cr.x+cr.w,cr.y+cr.h]]}
+function setRatio(v){chip(v);R=v==='o'?IW/IH:+v;if(!R)return;let w=IW,h=w/R;if(h>IH){h=IH;w=h*R}cr={x:(IW-w)/2,y:(IH-h)/2,w,h};cdraw()}
+$('chips').onclick=e=>{const b=e.target.closest('button');if(b)setRatio(b.dataset.r)};
+cv.addEventListener('pointerdown',e=>{const p=pos(e,cv);p.x/=cs;p.y/=cs;cv.setPointerCapture(e.pointerId);
+ const cs_=corners();for(let i=0;i<4;i++){if(Math.hypot(cs_[i][0]-p.x,cs_[i][1]-p.y)*cs<28){const o=cs_[3-i];cd={m:'r',ax:o[0],ay:o[1]};return}}
+ if(p.x>=cr.x&&p.x<=cr.x+cr.w&&p.y>=cr.y&&p.y<=cr.y+cr.h)cd={m:'m',dx:p.x-cr.x,dy:p.y-cr.y}});
+cv.addEventListener('pointermove',e=>{if(!cd)return;const p=pos(e,cv);p.x/=cs;p.y/=cs;
+ if(cd.m==='m'){cr.x=Math.max(0,Math.min(IW-cr.w,p.x-cd.dx));cr.y=Math.max(0,Math.min(IH-cr.h,p.y-cd.dy))}
+ else{const sx=p.x<cd.ax?-1:1,sy=p.y<cd.ay?-1:1,mw=sx>0?IW-cd.ax:cd.ax,mh=sy>0?IH-cd.ay:cd.ay;
+  let w=Math.abs(p.x-cd.ax),h=Math.abs(p.y-cd.ay);
+  if(R){if(w/R>h)h=w/R;else w=h*R;const k=Math.min(1,mw/w,mh/h);w*=k;h*=k}else{w=Math.min(w,mw);h=Math.min(h,mh)}
+  w=Math.max(40,w);h=Math.max(40,h);cr={x:sx>0?cd.ax:cd.ax-w,y:sy>0?cd.ay:cd.ay-h,w,h}}
+ cdraw()});
+cv.addEventListener('pointerup',()=>cd=null);
+$('creset').onclick=()=>{cr={x:0,y:0,w:IW,h:IH};R=0;chip(0);cdraw()};
+$('ccancel').onclick=()=>dlg.close();
+$('capply').onclick=()=>{const t=sel,cxm=t.x+t.w/2,cym=t.y+t.h/2;t.sx=cr.x;t.sy=cr.y;t.sw=cr.w;t.sh=cr.h;
+ t.h=t.w*cr.h/cr.w;t.x=cxm-t.w/2;t.y=cym-t.h/2;t.base=t.w;dlg.close();ctl();draw()};
+
+/* ---- export ---- */
+const st=$('stage'),delay=ms=>new Promise(r=>setTimeout(r,ms));
+let dl=null;(window.claude&&claude.use?claude.use('downloads'):Promise.resolve(null)).then(d=>{dl=d}).catch(()=>{});
+async function save(i){if(dl){await dl.save({filename:'slide-'+(i+1)+'.png',data:blobs[i]});return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blobs[i]);a.download='slide-'+(i+1)+'.png';document.body.append(a);a.click();a.remove()}
+function canShare(){return !!(navigator.canShare&&navigator.canShare({files:[new File([blobs[0]],'a.png',{type:'image/png'})]}))}
+async function build(){sel=null;ctl();const S=+$('q').value,out=$('out');out.innerHTML='';blobs=[];
+ if(!items.length){out.textContent='Add at least one photo first.';return false}
+ for(let i=0;i<N;i++){const t=document.createElement('canvas');t.width=FW*S;t.height=FH*S;
+  const g=t.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+  g.fillStyle=$('bg').value;g.fillRect(0,0,t.width,t.height);g.setTransform(S,0,0,S,-i*FW*S,0);
+  for(const m of items)g.drawImage(m.img,m.sx,m.sy,m.sw,m.sh,m.x,m.y,m.w,m.h);
+  const b=await new Promise(r=>t.toBlob(r,'image/png'));blobs.push(b);
+  const fig=document.createElement('figure'),im=new Image();im.src=t.toDataURL('image/png');im.alt='Slide '+(i+1);
+  const cap=document.createElement('figcaption'),bt=document.createElement('button');bt.textContent='Save slide '+(i+1);bt.onclick=()=>save(i).catch(()=>{});
+  cap.append(bt);fig.append(im,cap);out.append(fig)}
+ draw();dirty=false;$('shr').hidden=!canShare();return true}
+$('exp').onclick=async()=>{if(await build())$('out').scrollIntoView({behavior:'smooth'})};
+$('all').onclick=async()=>{const S=+$('q').value;if(dirty||!blobs.length){if(!await build())return}
+ try{for(let i=0;i<blobs.length;i++){await save(i);await delay(150)}}catch(e){$('msg').textContent=e&&e.code==='declined'?'Saving cancelled.':'Couldn’t save the slides here.';return}
+ $('msg').textContent='Saved '+N+' slides as PNG, '+FW*S+'×'+(FH*S)+' px each, with no compression loss. On iPhone, use Save to Photos / Share to put them in your Photos app.'};
+$('shr').onclick=async()=>{if(dirty||!blobs.length){if(!await build())return}
+ navigator.share({files:blobs.map((b,i)=>new File([b],'slide-'+(i+1)+'.png',{type:'image/png'}))}).catch(()=>{})};
+/* ---- slide navigation ---- */
+function sw(){return c.getBoundingClientRect().width/N}
+function ind(){$('ind').textContent='Slide '+Math.min(N,Math.round(st.scrollLeft/sw())+1)+' of '+N}
+st.addEventListener('scroll',ind);
+$('prev').onclick=()=>st.scrollBy({left:-sw(),behavior:'smooth'});
+$('next').onclick=()=>st.scrollBy({left:sw(),behavior:'smooth'});
+$('n').addEventListener('change',()=>{st.scrollLeft=0;ind()});
+setup();ind();
+</script>
+</body>
+</html>
