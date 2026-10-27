@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spanner – panorama carousel maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Bebas+Neue&family=Caveat&family=Cormorant+Garamond:wght@500&family=DM+Sans:wght@400;600&family=Libre+Baskerville&family=Pacifico&family=Playfair+Display&family=Space+Mono&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#eceef2;--surface:#fff;--ink:#1c1d22;--mute:#666b78;--line:#d3d6de;--acc:#2f5bff;--accink:#fff;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -16,176 +18,364 @@ h1{font-size:1.5rem;margin:4px 0 2px;letter-spacing:-.02em}
 .sub,.hint{color:var(--mute);margin:0 0 12px}.hint{font-size:.9rem;margin:8px 0}
 .stage{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
 .wrap{position:relative;display:inline-block;line-height:0}
-#c{touch-action:none;display:block;height:min(52vh,460px);box-shadow:0 0 0 1px var(--line)}
+#c{touch-action:none;display:block;height:min(50vh,460px);box-shadow:0 0 0 1px var(--line)}
 .guides{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right,transparent calc(100% - 2px),var(--acc) 0)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:10px 0}
 .row h2{flex-basis:100%;margin:0;font-size:.95rem}
 label{display:flex;flex-direction:column;font-size:.8rem;color:var(--mute);gap:3px}
-select,input[type=color]{height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;padding:0 8px}
+select,input[type=color],input[type=text]{height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;padding:0 8px}
+input[type=text]{min-width:200px}
 input[type=range]{width:150px;height:44px;accent-color:var(--acc)}
-button,.btn{height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
+input:disabled,select:disabled{opacity:.4}
+button{height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
 button:disabled{opacity:.4;cursor:default}
 .primary{background:var(--acc)!important;color:var(--accink)!important;border-color:var(--acc)!important}
-button:focus-visible,.btn:focus-within,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.nav{display:flex;align-items:center;gap:10px;margin:8px 0}.nav span{flex:1;text-align:center;font-weight:600}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:6px}
+.tabs button{height:40px;flex:none}.tabs button[aria-selected=true],.chips button[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.panel{display:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:2px 12px 8px}.panel.on{display:block}
+.icons button{height:auto;padding:5px}.icons canvas{display:block;width:52px;height:52px}
+.chips button{height:38px;padding:0 12px;font-weight:500}
 #out{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
 #out figure{margin:0}#out img{width:100%;border-radius:8px;border:1px solid var(--line);display:block}
 #out figcaption{font-size:.85rem;color:var(--mute);margin-top:4px}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);max-width:96vw;padding:14px}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 #cc{touch-action:none;display:block;margin:0 auto 10px;max-width:100%}
-.chips button{height:38px;padding:0 12px;font-weight:500}
-.chips button[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
-.nav{display:flex;align-items:center;gap:10px;margin:8px 0}.nav span{flex:1;text-align:center;font-weight:600}
+button[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+#abar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(0,0,0,.18)}#abar[hidden]{display:none}#abar .atxt{flex-basis:100%;text-align:center;font-size:.85rem;color:var(--mute)}
 </style>
 </head>
 <body>
 <main>
 <h1>Spanner</h1>
-<p class="sub">Lay photos across several slides so they connect when someone swipes.</p>
+<p class="sub">Build swipeable panorama carousels with collages, frames, text and stickers.</p>
 
 <div class="stage" id="stage"><div class="wrap"><canvas id="c"></canvas><div class="guides" id="g"></div></div></div>
-<div class="nav"><button id="prev" aria-label="Previous slide">&lt; Previous</button><span id="ind">Slide 1 of 4</span><button id="next" aria-label="Next slide">Next &gt;</button></div>
-<p class="hint">Drag a photo to move it. Drag empty space, or use Previous and Next, to change slide. Hold a photo near the screen edge to carry it to the next slide.</p>
+<div class="nav"><button id="prev">&lt; Previous</button><span id="ind">Slide 1 of 4</span><button id="next">Next &gt;</button></div>
+<p class="hint">Tap + in a box to add a photo. Use the corner icon to replace it and the bottom icon to move or zoom it inside the box. Drag empty space to change slide.</p>
 
 <div class="row">
+  <button id="un" disabled>Undo</button><button id="re" disabled>Redo</button>
+  <button id="dup" data-need="any" disabled>Duplicate</button><button id="lk" data-need="any" disabled>Lock</button>
+  <button id="fwd" data-need="any" disabled>Front</button><button id="bk" data-need="any" disabled>Back</button>
+  <button id="del" data-need="any" disabled>Delete</button>
+</div>
+
+<div class="tabs" id="tabs">
+  <button data-t="0" aria-selected="true">Photos</button><button data-t="1" aria-selected="false">Edit</button><button data-t="2" aria-selected="false">Text</button>
+  <button data-t="3" aria-selected="false">Frames</button><button data-t="4" aria-selected="false">Grids</button><button data-t="5" aria-selected="false">Stickers</button><button data-t="6" aria-selected="false">Templates</button>
+</div>
+
+<div class="panel on row">
   <button id="add" type="button" class="primary">Add photos</button><input id="f" type="file" accept="image/*" multiple tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
   <label>Slides<select id="n"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>8</option><option>10</option></select></label>
-  <label>Slide shape<select id="r">
-    <option value="1350">4:5 portrait · 1080×1350</option><option value="1080">1:1 square · 1080×1080</option>
-    <option value="1440">3:4 portrait · 1080×1440</option><option value="1920">9:16 story · 1080×1920</option>
-    <option value="608">16:9 landscape · 1080×608</option></select></label>
+  <label>Slide shape<select id="r"><option value="1350">4:5 portrait · 1080×1350</option><option value="1080">1:1 square · 1080×1080</option><option value="1440">3:4 portrait · 1080×1440</option><option value="1920">9:16 story · 1080×1920</option><option value="608">16:9 landscape · 1080×608</option></select></label>
   <label>Background<input id="bg" type="color" value="#ffffff"></label>
 </div>
 
-<div class="row">
-  <h2>Selected photo</h2>
-  <button id="crop" disabled>Crop</button>
-  <button id="fw" disabled>Fit width</button>
-  <button id="fh" disabled>Fill height</button>
-  <button id="sp" disabled>Span 2 slides</button>
-  <label>Size<input id="sz" type="range" min="10" max="300" value="100" disabled></label>
-  <button id="fwd" disabled>Bring to front</button>
-  <button id="del" disabled>Remove</button>
+<div class="panel row">
+  <button id="crop" data-need="photofilled" disabled>Crop</button><button id="fw" data-need="photo" disabled>Fit width</button><button id="fh" data-need="photo" disabled>Fill height</button><button id="sp" data-need="photo" disabled>Span 2 slides</button>
+  <label>Zoom photo in box<input id="zm" type="range" min="100" max="500" value="100" data-need="photofilled" disabled></label>
+  <button id="adjb" data-need="photofilled" disabled>Move &amp; zoom photo</button><button id="ft" data-need="photofilled" aria-pressed="false" disabled>Fit whole photo</button>
+  <label>Size<input id="sz" data-need="nt" type="range" min="10" max="300" value="100" disabled></label>
+  <label>Rotate<input id="rot" data-need="any" type="range" min="-180" max="180" value="0" disabled></label>
+  <label>Brightness<input id="b" data-need="photofilled" type="range" min="-100" max="100" value="0" disabled></label>
+  <label>Contrast<input id="ct" data-need="photofilled" type="range" min="-100" max="100" value="0" disabled></label>
+  <label>Saturation<input id="sa" data-need="photofilled" type="range" min="-100" max="100" value="0" disabled></label>
+  <button id="rst" data-need="photofilled" disabled>Reset edits</button>
+  <span id="nudge" class="row" style="margin:0"><button data-need="any" data-d="l" disabled aria-label="Nudge left">←</button><button data-need="any" data-d="u" disabled aria-label="Nudge up">↑</button><button data-need="any" data-d="d" disabled aria-label="Nudge down">↓</button><button data-need="any" data-d="r" disabled aria-label="Nudge right">→</button></span>
+</div>
+
+<div class="panel row">
+  <button id="addtxt" class="primary">Add text</button>
+  <label>Text<input id="tx" type="text" data-need="text" disabled></label>
+  <label>Font<select id="ff" data-need="text" disabled></select></label>
+  <label>Color<input id="tc" type="color" value="#1c1d22" data-need="text" disabled></label>
+  <label>Size<input id="ts" type="range" min="20" max="400" value="110" data-need="text" disabled></label>
+</div>
+
+<div class="panel row chips" id="frames">
+  <h2>Frame for the selected photo</h2>
+  <button data-f="none" data-need="photo" disabled>None</button><button data-f="polaroid" data-need="photo" disabled>Polaroid</button><button data-f="film" data-need="photo" disabled>Film strip</button><button data-f="stamp" data-need="photo" disabled>Stamp</button><button data-f="camera" data-need="photo" disabled>Camera</button><button data-f="black" data-need="photo" disabled>Black edge</button><button data-f="white" data-need="photo" disabled>White edge</button>
+</div>
+
+<div class="panel row icons" id="grids"><h2>Collage grid for the slide in view</h2></div>
+
+<div class="panel row chips" id="stk">
+  <h2>Stickers</h2>
+  <button data-s="tape">Tape</button><button data-s="torn">Torn paper</button><button data-s="heart">Heart</button><button data-s="star">Star</button>
+  <label>Color<input id="sc" type="color" value="#ff5a6e" data-need="st" disabled></label>
+</div>
+
+<div class="panel row chips" id="tpls">
+  <h2>Starter layouts (replaces the current design)</h2>
+  <button data-p="0">Polaroid trio</button><button data-p="1">Film roll</button><button data-p="2">Grid story</button><button data-p="3">Scrapbook</button>
 </div>
 
 <div class="row">
   <label>Quality<select id="q"><option value="1">Standard · 1080 wide</option><option value="2" selected>High · 2160 wide</option></select></label>
-  <button id="exp">Preview slides</button>
-  <button id="all" class="primary">Save to device</button>
-  <button id="shr" hidden>Save to Photos / Share</button>
+  <button id="exp" class="primary">Preview &amp; save</button>
 </div>
 <p class="hint" id="msg" aria-live="polite"></p>
-<div id="out" aria-live="polite"></div>
+<div id="out"></div>
 
+<div id="abar" hidden role="group" aria-label="Move or zoom the photo in its box">
+  <span class="atxt">Drag the photo to move it. Pinch or use the slider to zoom.</span>
+  <button id="azm" aria-label="Zoom out">−</button><input id="az" type="range" min="100" max="500" value="100" aria-label="Zoom"><button id="azp" aria-label="Zoom in">+</button>
+  <button id="arst">Reset</button><button id="acan">Cancel</button><button id="aok" class="primary">OK</button>
+</div>
 <dialog id="dlg">
   <canvas id="cc"></canvas>
   <div class="chips row" id="chips">
-    <button data-r="0" aria-pressed="true">Free</button><button data-r="o">Original</button>
-    <button data-r="1">1:1</button><button data-r="0.8">4:5</button><button data-r="0.75">3:4</button>
-    <button data-r="0.5625">9:16</button><button data-r="1.7778">16:9</button><button data-r="1.5">3:2</button>
+    <button data-r="0" aria-pressed="true">Free</button><button data-r="o">Original</button><button data-r="1">1:1</button><button data-r="0.8">4:5</button><button data-r="0.75">3:4</button><button data-r="0.5625">9:16</button><button data-r="1.7778">16:9</button><button data-r="1.5">3:2</button>
   </div>
   <div class="row"><button id="creset">Reset</button><button id="ccancel">Cancel</button><button id="capply" class="primary">Apply crop</button></div>
 </dialog>
 </main>
 <script>
-const FW=1080;let FH=1350,N=4,items=[],sel=null,drag=null,pan=null,dirty=true,blobs=[];
-const c=document.getElementById('c'),x=c.getContext('2d'),$=id=>document.getElementById(id);
-function setup(){c.width=N*FW;c.height=FH;$('g').style.backgroundSize=(100/N)+'% 100%';draw()}
-function draw(exp){if(!exp)dirty=true;x.fillStyle=$('bg').value;x.fillRect(0,0,c.width,c.height);
- for(const t of items)x.drawImage(t.img,t.sx,t.sy,t.sw,t.sh,t.x,t.y,t.w,t.h);
- if(!exp&&sel){x.strokeStyle='#2f5bff';x.lineWidth=6;x.strokeRect(sel.x,sel.y,sel.w,sel.h)}}
+const FW=1080,PI=Math.PI,$=id=>document.getElementById(id);
+const FONTS=[['Clean','"DM Sans",system-ui,sans-serif'],['Playfair','"Playfair Display",serif'],['Bebas','"Bebas Neue",Impact,sans-serif'],['Script','Pacifico,cursive'],['Hand','Caveat,cursive'],['Archivo','"Archivo Black",Impact,sans-serif'],['Cormorant','"Cormorant Garamond",serif'],['Mono','"Space Mono",monospace'],['Baskerville','"Libre Baskerville",serif'],['Typewriter','"Courier New",monospace']];
+const LAY=[[[0,0,.5,1],[.5,0,.5,1]],[[0,0,1,.5],[0,.5,1,.5]],[[0,0,.5,1],[.5,0,.5,.5],[.5,.5,.5,.5]],[[0,0,1,.5],[0,.5,.5,.5],[.5,.5,.5,.5]],[[0,0,1/3,1],[1/3,0,1/3,1],[2/3,0,1/3,1]],[[0,0,1,1/3],[0,1/3,1,1/3],[0,2/3,1,1/3]],[[0,0,.5,.5],[.5,0,.5,.5],[0,.5,.5,.5],[.5,.5,.5,.5]],[[0,0,.66,1],[.66,0,.34,.5],[.66,.5,.34,.5]]];
+let FH=1350,N=4,items=[],sel=null,drag=null,pan=null,dirty=true,blobs=[],hist=[],fut=[],SS=1,pend=0,ftarget=null,adj=null,adjB=null,tapI=null;
+const c=$('c'),x=c.getContext('2d'),st=$('stage'),delay=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- model ---------- */
+const mk=o=>Object.assign({k:'img',x:0,y:0,w:100,h:100,rot:0,lock:false,z:1,px:0,py:0,fit:false,inner:o.k==='cell',frame:'none',adj:{b:0,c:0,s:0},cache:null,base:o.w||100},o);
+const kind=t=>t&&(t.k==='img'||t.k==='cell')?'photo':t&&t.k;
+const cl=()=>items.map(t=>({...t,adj:{...t.adj}}));
+function btns(){$('un').disabled=!hist.length;$('re').disabled=!fut.length}
+function snap(){if(adj)endAdj(true);hist.push(cl());if(hist.length>60)hist.shift();fut=[];btns();dirty=true}
+function undo(){if(adj)endAdj(true);if(!hist.length)return;fut.push(cl());items=hist.pop();sel=null;ctl();draw();btns()}
+function redo(){if(adj)endAdj(true);if(!fut.length)return;hist.push(cl());items=fut.pop();sel=null;ctl();draw();btns()}
+function measure(t){x.font=t.size+'px '+t.font;t.w=x.measureText(t.text||' ').width+t.size*.5;t.h=t.size*1.4}
+function setText(t,u){const cx=t.x+t.w/2,cy=t.y+t.h/2;Object.assign(t,u);measure(t);t.x=cx-t.w/2;t.y=cy-t.h/2}
+function resize(t,w){const cx=t.x+t.w/2,cy=t.y+t.h/2,r=t.h/t.w;t.w=w;t.h=w*r;t.x=cx-w/2;t.y=cy-t.h/2}
+function curSlide(){return Math.min(N-1,Math.max(0,Math.round(st.scrollLeft/sw())))}
+function applyAdj(t){const a=t.adj;if(!t.img||(!a.b&&!a.c&&!a.s)){t.cache=null;return}
+ const m=Math.min(1,2400/Math.max(t.img.naturalWidth,t.img.naturalHeight)),W=Math.round(t.img.naturalWidth*m),H=Math.round(t.img.naturalHeight*m);
+ const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');g.drawImage(t.img,0,0,W,H);
+ const d=g.getImageData(0,0,W,H),p=d.data,k=1+a.c/100,sa=1+a.s/100,b=a.b*1.28;
+ for(let i=0;i<p.length;i+=4){const l=.3*p[i]+.59*p[i+1]+.11*p[i+2];
+  p[i]=((l+(p[i]-l)*sa)-128)*k+128+b;p[i+1]=((l+(p[i+1]-l)*sa)-128)*k+128+b;p[i+2]=((l+(p[i+2]-l)*sa)-128)*k+128+b}
+ g.putImageData(d,0,0);t.cache=cv}
+
+/* ---------- drawing ---------- */
+function cover(t,iw,ih){let sx=t.sx,sy=t.sy,sw=t.sw,sh=t.sh;const r=iw/ih;
+ if(sw/sh>r){const n=sh*r;sx+=(sw-n)/2;sw=n}else{const n=sw/r;sy+=(sh-n)/2;sh=n}return[sx,sy,sw,sh]}
+function raw(t,sx,sy,sw,sh){let im=t.img;if(t.cache){const k=t.cache.width/t.img.naturalWidth;im=t.cache;sx*=k;sy*=k;sw*=k;sh*=k}return[im,sx,sy,sw,sh]}
+function src(t,iw,ih){const[,,cw,ch]=cover(t,iw,ih),z=t.z||1,vw=cw/z,vh=ch/z;
+ return raw(t,t.sx+(t.sw-vw)*(1+t.px)/2,t.sy+(t.sh-vh)*(1+t.py)/2,vw,vh)}
+function pads(t){const m=Math.min(t.w,t.h)*.05;return({none:[0,0,0,0],polaroid:[m,m,m,m*3.6],film:[m*.9,m*1.7,m*.9,m*1.7],stamp:[m*1.3,m*1.3,m*1.3,m*1.3],camera:[m*1.2,m*2.8,m*1.2,m*1.2],black:[m*.6,m*.6,m*.6,m*.6],white:[m*.8,m*.8,m*.8,m*.8]})[t.frame]}
+function stampPath(g,w,h,r){const nx=Math.max(2,Math.floor(w/(2.6*r))),ny=Math.max(2,Math.floor(h/(2.6*r))),sx=w/nx,sy=h/ny;g.beginPath();g.moveTo(0,0);
+ for(let i=0;i<nx;i++)g.arc((i+.5)*sx,0,r,PI,0,true);
+ for(let i=0;i<ny;i++)g.arc(w,(i+.5)*sy,r,-PI/2,PI/2,true);
+ for(let i=nx-1;i>=0;i--)g.arc((i+.5)*sx,h,r,0,PI,true);
+ for(let i=ny-1;i>=0;i--)g.arc(0,(i+.5)*sy,r,PI/2,-PI/2,true);g.closePath()}
+function bgFrame(g,t,m){const w=t.w,h=t.h;g.save();
+ if(t.frame==='polaroid'||t.frame==='stamp'){g.shadowColor='rgba(0,0,0,.28)';g.shadowBlur=16*SS;g.shadowOffsetY=5*SS}
+ if(t.frame==='stamp'){stampPath(g,w,h,m*.55);g.fillStyle='#fbfaf6';g.fill()}
+ else{g.fillStyle={polaroid:'#f8f7f3',film:'#17120e',camera:'#35373c',black:'#0b0b0b',white:'#fff'}[t.frame];g.fillRect(0,0,w,h)}
+ g.restore();
+ if(t.frame==='film'){g.fillStyle='#e6dfd0';const s=m*.8;for(let a=m*.8;a<w-s;a+=s*1.9){g.fillRect(a,m*.45,s,m*.8);g.fillRect(a,h-m*1.25,s,m*.8)}}
+ if(t.frame==='camera'){g.fillStyle='#a5aab3';g.fillRect(0,0,w,m*.7);g.fillStyle='#0d0e11';g.beginPath();g.arc(w*.84,m*1.7,m*.8,0,7);g.fill();g.fillStyle='#6b7280';g.fillRect(m*1.2,m*1.2,m*2,m*.9)}}
+function drawPhoto(g,t,exp){const[l,tp,r,bt]=pads(t),m=Math.min(t.w,t.h)*.05,iw=t.w-l-r,ih=t.h-tp-bt;
+ if(t.frame!=='none')bgFrame(g,t,m);
+ if(t.img&&t.fit){const q=t.sw/t.sh;let dw=iw,dh=iw/q;if(dh>ih){dh=ih;dw=ih*q}const[s,a,b,c2,d]=raw(t,t.sx,t.sy,t.sw,t.sh);g.drawImage(s,a,b,c2,d,l+(iw-dw)/2,tp+(ih-dh)/2,dw,dh)}
+ else if(t.img){const[s,a,b,c2,d]=src(t,iw,ih);g.drawImage(s,a,b,c2,d,l,tp,iw,ih)}
+ else if(!exp){g.fillStyle='#e3e4e8';g.fillRect(l,tp,iw,ih);const cx=l+iw/2,cy=tp+ih/2,k=Math.max(Math.min(iw,ih)*.12,26*px());g.fillStyle='#5a5c63';g.beginPath();g.arc(cx,cy,k,0,7);g.fill();
+  g.strokeStyle='#fff';g.lineWidth=k*.2;g.beginPath();g.moveTo(cx-k*.5,cy);g.lineTo(cx+k*.5,cy);g.moveTo(cx,cy-k*.5);g.lineTo(cx,cy+k*.5);g.stroke()}}
+function sticker(g,t){const w=t.w,h=t.h;g.fillStyle=t.col;
+ if(t.kind==='tape'){g.globalAlpha=.88;g.fillRect(0,0,w,h);g.globalAlpha=1}
+ else if(t.kind==='torn'){g.save();g.shadowColor='rgba(0,0,0,.25)';g.shadowBlur=14*SS;g.beginPath();g.moveTo(w,0);g.lineTo(w,h);g.lineTo(w*.2,h);
+  for(let y=h,i=0;y>=0;y-=22,i++)g.lineTo(w*.1+(i%2?w*.1:0)+Math.sin(y*.7)*6,y);g.closePath();g.fill();g.restore()}
+ else if(t.kind==='heart'){g.beginPath();g.moveTo(w/2,h*.92);g.bezierCurveTo(-w*.1,h*.5,w*.08,-h*.05,w/2,h*.3);g.bezierCurveTo(w*.92,-h*.05,w*1.1,h*.5,w/2,h*.92);g.fill()}
+ else{g.beginPath();for(let i=0;i<10;i++){const r=i%2?w*.2:w*.5,a=-PI/2+i*PI/5;g.lineTo(w/2+r*Math.cos(a),h/2+r*Math.sin(a))}g.closePath();g.fill()}}
+function drawItem(g,t,exp){g.save();g.translate(t.x+t.w/2,t.y+t.h/2);g.rotate(t.rot*PI/180);g.translate(-t.w/2,-t.h/2);
+ if(t.k==='text'){g.font=t.size+'px '+t.font;g.fillStyle=t.color;g.textAlign='center';g.textBaseline='middle';g.fillText(t.text,t.w/2,t.h/2)}
+ else if(t.k==='st')sticker(g,t);else drawPhoto(g,t,exp);g.restore()}
+function drawAll(g,exp){g.fillStyle=$('bg').value;g.fillRect(0,0,N*FW,FH);for(const t of items)drawItem(g,t,exp)}
+const px=()=>c.width/c.getBoundingClientRect().width;
+function iconList(t){if(t.k!=='cell'||adj)return[];const f=px(),[l,tp,r,bt]=pads(t),iw=t.w-l-r,ih=t.h-tp-bt,a=t.rot*PI/180,cx=t.x+t.w/2,cy=t.y+t.h/2;
+ const W=(lx,ly)=>({lx,ly,x:cx+(lx-t.w/2)*Math.cos(a)-(ly-t.h/2)*Math.sin(a),y:cy+(lx-t.w/2)*Math.sin(a)+(ly-t.h/2)*Math.cos(a)});
+ if(!t.img){const k=Math.max(Math.min(iw,ih)*.12,26*f);return[{a:'add',t,r:k+10*f,rr:k,...W(l+iw/2,tp+ih/2)}]}
+ const R=Math.max(14*f,Math.min(22*f,Math.min(iw,ih)*.16));
+ return[{a:'rep',t,r:R+8*f,rr:R,...W(l+iw-R-10*f,tp+R+10*f)},{a:'adj',t,r:R+8*f,rr:R,...W(l+iw/2,tp+ih-R-10*f)}]}
+function drawIcons(){for(const t of items)for(const o of iconList(t)){if(o.a==='add')continue;
+ x.save();x.translate(t.x+t.w/2,t.y+t.h/2);x.rotate(t.rot*PI/180);x.translate(o.lx-t.w/2,o.ly-t.h/2);
+ const R=o.rr;x.fillStyle='rgba(18,19,24,.82)';x.beginPath();x.arc(0,0,R,0,7);x.fill();
+ x.strokeStyle='#fff';x.fillStyle='#fff';x.lineWidth=R*.14;x.lineCap='round';x.lineJoin='round';
+ if(o.a==='rep'){const e=PI*1.35,q=R*.5,ex=q*Math.cos(e),ey=q*Math.sin(e),tx=-Math.sin(e),ty=Math.cos(e),nx=Math.cos(e),ny=Math.sin(e);
+  x.beginPath();x.arc(0,0,q,-PI*.15,e);x.stroke();x.beginPath();x.moveTo(ex+tx*q*.5,ey+ty*q*.5);x.lineTo(ex+nx*q*.42,ey+ny*q*.42);x.lineTo(ex-nx*q*.42,ey-ny*q*.42);x.closePath();x.fill()}
+ else{const q=R*.55,h=q*.38;x.beginPath();x.moveTo(-q,0);x.lineTo(q,0);x.moveTo(0,-q);x.lineTo(0,q);x.stroke();
+  for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){x.beginPath();x.moveTo(dx*q+(dy?-h:-dx*h),dy*q+(dx?-h:-dy*h));x.lineTo(dx*q,dy*q);x.lineTo(dx*q+(dy?h:-dx*h),dy*q+(dx?h:-dy*h));x.stroke()}}
+ x.restore()}}
+function draw(){dirty=true;drawAll(x,false);drawIcons();if(!sel)return;const t=sel,f=px();x.save();x.translate(t.x+t.w/2,t.y+t.h/2);x.rotate(t.rot*PI/180);
+ x.strokeStyle='#2f5bff';x.fillStyle='#fff';x.lineWidth=2.5*f;x.strokeRect(-t.w/2,-t.h/2,t.w,t.h);
+ if(!adj){x.beginPath();x.moveTo(0,t.h/2);x.lineTo(0,t.h/2+35*f);x.stroke();
+ x.beginPath();x.arc(t.w/2,t.h/2,11*f,0,7);x.fill();x.stroke();x.beginPath();x.arc(0,t.h/2+48*f,13*f,0,7);x.fill();x.stroke()}x.restore()}
+function setup(){c.width=N*FW;c.height=FH;$('g').style.backgroundSize=(100/N)+'% 100%';draw();updInd()}
+function setN(n){N=n;$('n').value=n;st.scrollLeft=0;setup()}
+
+/* ---------- selection & pointer ---------- */
 function pos(e,el){const r=el.getBoundingClientRect();return{x:(e.clientX-r.left)*el.width/r.width,y:(e.clientY-r.top)*el.height/r.height}}
-function ctl(){const on=!!sel;['sz','fwd','del','crop','fw','fh','sp'].forEach(i=>$(i).disabled=!on);if(on)$('sz').value=Math.round(sel.w/sel.base*100)}
-c.addEventListener('pointerdown',e=>{const p=pos(e,c);sel=null;
- for(let i=items.length-1;i>=0;i--){const t=items[i];if(p.x>=t.x&&p.x<=t.x+t.w&&p.y>=t.y&&p.y<=t.y+t.h){sel=t;drag={dx:p.x-t.x,dy:p.y-t.y};c.setPointerCapture(e.pointerId);break}}
- if(!sel){pan={cx:e.clientX,sl:$('stage').scrollLeft};c.setPointerCapture(e.pointerId)}
- if(drag){drag.cx=e.clientX;drag.cy=e.clientY;requestAnimationFrame(autoscroll)}
+function hit(p){for(let i=items.length-1;i>=0;i--){const t=items[i],a=t.rot*PI/180,dx=p.x-t.x-t.w/2,dy=p.y-t.y-t.h/2,lx=dx*Math.cos(a)+dy*Math.sin(a),ly=-dx*Math.sin(a)+dy*Math.cos(a);if(Math.abs(lx)<=t.w/2&&Math.abs(ly)<=t.h/2)return t}return null}
+function handleAt(p){const t=sel,f=px(),a=t.rot*PI/180,cx=t.x+t.w/2,cy=t.y+t.h/2,W=(lx,ly)=>({x:cx+lx*Math.cos(a)-ly*Math.sin(a),y:cy+lx*Math.sin(a)+ly*Math.cos(a)});
+ const s=W(t.w/2,t.h/2),r=W(0,t.h/2+48*f);if(Math.hypot(p.x-s.x,p.y-s.y)<28*f)return'scale';if(Math.hypot(p.x-r.x,p.y-r.y)<28*f)return'rot';return null}
+const pts=new Map();
+c.addEventListener('pointerdown',e=>{const p=pos(e,c),hh=sel&&!sel.lock?handleAt(p):null;c.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pts.size===2&&sel&&sel.img&&!sel.lock){const[a,b]=[...pts.values()];if(!adj)snap();drag={m:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y)||1,z0:sel.z||1,sn:1};pan=null;return}
+ tapI=null;
+ if(adj){if(hit(p)===adj&&!adj.lock)drag={m:'inner',p0:p,px0:adj.px,py0:adj.py};else pan={cx:e.clientX,sl:st.scrollLeft};return}
+ const top=hit(p);if(top){const o=iconList(top).find(o=>Math.hypot(p.x-o.x,p.y-o.y)<=o.r);if(o){tapI={a:o.a,t:top,cx:e.clientX,cy:e.clientY};sel=top;ctl();draw();return}}
+ if(hh){const ox=sel.x+sel.w/2,oy=sel.y+sel.h/2;drag={m:hh,ox,oy,d0:Math.hypot(p.x-ox,p.y-oy)||1,w0:sel.w,h0:sel.h,s0:sel.size};return}
+ const t=hit(p);sel=t;
+ if(t){if(!t.lock){drag={m:'move',dx:p.x-t.x,dy:p.y-t.y,cx:e.clientX,cy:e.clientY};requestAnimationFrame(autoscroll)}}
+ else pan={cx:e.clientX,sl:st.scrollLeft};
  ctl();draw()});
-function autoscroll(){if(!drag||!sel)return;const st=$('stage'),r=st.getBoundingClientRect();let d=0;
+function autoscroll(){if(!drag||drag.m!=='move'||!sel)return;const r=st.getBoundingClientRect();let d=0;
  if(drag.cx>r.right-48)d=14;else if(drag.cx<r.left+48)d=-14;
  if(d){st.scrollLeft+=d;const p=pos({clientX:drag.cx,clientY:drag.cy},c);sel.x=p.x-drag.dx;sel.y=p.y-drag.dy;draw()}
  requestAnimationFrame(autoscroll)}
-c.addEventListener('pointermove',e=>{if(pan){const st=$('stage');st.scrollLeft=pan.sl-(e.clientX-pan.cx);return}
- if(!drag||!sel)return;drag.cx=e.clientX;drag.cy=e.clientY;const p=pos(e,c);sel.x=p.x-drag.dx;sel.y=p.y-drag.dy;draw()});
-c.addEventListener('pointerup',()=>{drag=null;pan=null});
-c.addEventListener('pointercancel',()=>{drag=null;pan=null});
-$('add').onclick=()=>$('f').click();
-$('f').onchange=e=>{for(const f of e.target.files){const img=new Image();img.onerror=()=>{$('msg').textContent='Couldn’t open '+f.name+'. Try a JPG, PNG or WebP photo; HEIC isn’t supported in every browser.'};img.onload=()=>{$('msg').textContent='';
- const w=FW*.86,iw=img.naturalWidth,ih=img.naturalHeight,h=w*ih/iw,k=items.length%N;
- const t={img,sx:0,sy:0,sw:iw,sh:ih,w,h,base:w,x:k*FW+(FW-w)/2,y:(FH-h)/2};items.push(t);sel=t;ctl();draw()};const fr=new FileReader();fr.onload=()=>{img.src=fr.result};fr.readAsDataURL(f)}e.target.value=''};
-function resize(t,w){const cx=t.x+t.w/2,cy=t.y+t.h/2,r=t.sh/t.sw;t.w=w;t.h=w*r;t.x=cx-t.w/2;t.y=cy-t.h/2;t.base=w;ctl();draw()}
-$('sz').oninput=e=>{if(!sel)return;const b=sel.base;resize(sel,b*e.target.value/100);sel.base=b};
-$('fw').onclick=()=>{const f=Math.min(N-1,Math.max(0,Math.floor((sel.x+sel.w/2)/FW)));resize(sel,FW);sel.x=f*FW;draw()};
-$('fh').onclick=()=>{resize(sel,FH*sel.sw/sel.sh);draw()};
-$('sp').onclick=()=>{const f=Math.min(N-2,Math.max(0,Math.floor((sel.x+sel.w/2)/FW)));resize(sel,FW*2);sel.x=f*FW;draw()};
-$('fwd').onclick=()=>{items=items.filter(t=>t!==sel);items.push(sel);draw()};
-$('del').onclick=()=>{items=items.filter(t=>t!==sel);sel=null;ctl();draw()};
-$('n').onchange=e=>{N=+e.target.value;setup()};
+c.addEventListener('pointermove',e=>{if(pts.has(e.pointerId))pts.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pan){st.scrollLeft=pan.sl-(e.clientX-pan.cx);return}if(!drag||!sel)return;
+ if(drag.m==='pinch'){if(pts.size>=2){const[a,b]=[...pts.values()];sel.z=Math.min(5,Math.max(1,drag.z0*Math.hypot(a.x-b.x,a.y-b.y)/drag.d0));if(adj)$('az').value=Math.round(sel.z*100);draw()}return}
+ if(!drag.sn){if(!adj)snap();drag.sn=1}const p=pos(e,c);
+ if(drag.m==='inner'){const a=sel.rot*PI/180,dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,lx=dx*Math.cos(a)+dy*Math.sin(a),ly=-dx*Math.sin(a)+dy*Math.cos(a),[l,tp,r,bt]=pads(sel),iw=sel.w-l-r,ih=sel.h-tp-bt,[,,cw,ch]=cover(sel,iw,ih),z=sel.z||1,vw=cw/z,vh=ch/z,sx=sel.sw-vw,sy=sel.sh-vh;
+  if(sx>1e-6)sel.px=Math.max(-1,Math.min(1,drag.px0-2*lx*(vw/iw)/sx));if(sy>1e-6)sel.py=Math.max(-1,Math.min(1,drag.py0-2*ly*(vh/ih)/sy));draw();return}
+ if(drag.m==='move'){drag.cx=e.clientX;drag.cy=e.clientY;sel.x=p.x-drag.dx;sel.y=p.y-drag.dy}
+ else if(drag.m==='scale'){const k=Math.hypot(p.x-drag.ox,p.y-drag.oy)/drag.d0;
+  if(sel.k==='text'){sel.size=Math.max(16,drag.s0*k);measure(sel)}else{sel.w=Math.max(40,drag.w0*k);sel.h=sel.w*drag.h0/drag.w0}
+  sel.x=drag.ox-sel.w/2;sel.y=drag.oy-sel.h/2}
+ else{let r=Math.atan2(p.y-drag.oy,p.x-drag.ox)*180/PI-90;r=((r+180)%360+360)%360-180;if(Math.abs(r)<3)r=0;sel.rot=r}
+ draw()});
+c.addEventListener('click',e=>{const k=tapI;tapI=null;if(!k||Math.hypot(e.clientX-k.cx,e.clientY-k.cy)>12)return;
+ if(k.a==='adj')startAdj(k.t);else{ftarget=k.t;$('f').click()}});
+const endDrag=e=>{if(e)pts.delete(e.pointerId);if(pts.size<2&&drag&&drag.m==='pinch')drag=null;if(pts.size===0){drag=null;pan=null}ctl()};
+c.addEventListener('pointerup',endDrag);c.addEventListener('pointercancel',endDrag);
+
+function ctl(){const t=sel,kd=kind(t);
+ document.querySelectorAll('[data-need]').forEach(e=>{const n=e.dataset.need;e.disabled=!t||(n==='nt'?kd==='text':n==='photofilled'?!(kd==='photo'&&t.img):n!=='any'&&n!==kd)});
+ if(!t)return;$('sz').value=Math.round(t.w/t.base*100);$('rot').value=Math.round(t.rot);$('lk').textContent=t.lock?'Unlock':'Lock';
+ if(kd==='photo'){$('zm').value=Math.round((t.z||1)*100);$('ft').setAttribute('aria-pressed',!!t.fit);$('b').value=t.adj.b;$('ct').value=t.adj.c;$('sa').value=t.adj.s;document.querySelectorAll('#frames [data-f]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===t.frame))}
+ if(kd==='text'){$('tx').value=t.text;$('ff').value=t.fi;$('tc').value=t.color;$('ts').value=Math.round(t.size)}
+ if(kd==='st')$('sc').value=t.col}
+
+/* ---------- adjust photo inside box ---------- */
+function startAdj(t){if(!t||!t.img)return;snap();adj=t;sel=t;adjB={z:t.z,px:t.px,py:t.py,fit:t.fit,h:hist.length};t.fit=false;$('az').value=Math.round((t.z||1)*100);$('abar').hidden=false;draw()}
+function endAdj(ok){if(!adj)return;if(!ok){Object.assign(adj,{z:adjB.z,px:adjB.px,py:adjB.py,fit:adjB.fit});if(hist.length===adjB.h)hist.pop();btns()}adj=null;$('abar').hidden=true;ctl();draw()}
+$('aok').onclick=()=>endAdj(true);$('acan').onclick=()=>endAdj(false);
+$('az').oninput=e=>{if(adj){adj.z=e.target.value/100;draw()}};
+const zstep=d=>()=>{if(adj){adj.z=Math.min(5,Math.max(1,(adj.z||1)+d));$('az').value=Math.round(adj.z*100);draw()}};
+$('azm').onclick=zstep(-.2);$('azp').onclick=zstep(.2);
+$('arst').onclick=()=>{if(adj){adj.z=1;adj.px=0;adj.py=0;$('az').value=100;draw()}};
+/* ---------- adding things ---------- */
+const loadImg=f=>new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(f)});
+function fill(t,img){t.img=img;t.sx=t.sy=0;t.sw=img.naturalWidth;t.sh=img.naturalHeight;t.cache=null;t.adj={b:0,c:0,s:0};t.z=1;t.px=0;t.py=0;t.fit=false}
+function place(img){const iw=img.naturalWidth,ih=img.naturalHeight,cell=ftarget||((sel&&sel.k==='cell'&&!sel.img)?sel:items.find(t=>t.k==='cell'&&!t.img));ftarget=null;
+ if(cell){fill(cell,img);sel=cell}else{const w=FW*.78,h=w*ih/iw;sel=mk({k:'img',img,sx:0,sy:0,sw:iw,sh:ih,w,h,x:curSlide()*FW+FW*.11,y:(FH-h)/2});items.push(sel)}ctl();draw()}
+$('add').onclick=()=>{ftarget=null;$('f').click()};
+$('f').addEventListener('cancel',()=>{ftarget=null});
+$('f').onchange=async e=>{const fs=[...e.target.files];e.target.value='';snap();
+ for(const f of fs){try{place(await loadImg(f))}catch(_){$('msg').textContent='Couldn’t open '+f.name+'. Try a JPG, PNG or WebP photo; HEIC isn’t supported in every browser.'}}};
+function center(){return{x:curSlide()*FW+FW/2,y:FH/2}}
+$('addtxt').onclick=()=>{snap();const p=center(),t=mk({k:'text',text:'Your text',fi:0,font:FONTS[0][1],color:'#1c1d22',size:110});measure(t);t.x=p.x-t.w/2;t.y=p.y-t.h/2;items.push(t);sel=t;ctl();draw()};
+$('stk').onclick=e=>{const b=e.target.closest('button[data-s]');if(!b)return;snap();const p=center(),s=b.dataset.s,
+ d={tape:[340,96,'#e5d3a1',-6],torn:[150,FH,'#f7f5f0',0],heart:[260,260,'#ff5a6e',0],star:[260,260,'#ffc83d',0]}[s];
+ sel=mk({k:'st',kind:s,w:d[0],h:d[1],col:d[2],rot:d[3],x:s==='torn'?curSlide()*FW+FW-d[0]*.6:p.x-d[0]/2,y:s==='torn'?0:p.y-d[1]/2});items.push(sel);ctl();draw()};
+const mkCell=(x,y,w,h,frame,rot)=>mk({k:'cell',x,y,w,h,frame,rot:rot||0});
+const tape=(x,y,rot)=>mk({k:'st',kind:'tape',x,y,w:340,h:96,rot,col:'#e5d3a1'});
+function gridCells(L,si){const M=36,G=24,W=FW-2*M,H=FH-2*M;return L.map(r=>mkCell(si*FW+M+r[0]*W+G/2,M+r[1]*H+G/2,r[2]*W-G,r[3]*H-G,'none'))}
+$('tpls').onclick=e=>{const b=e.target.closest('button[data-p]');if(!b)return;snap();items=[];sel=null;const n=+b.dataset.p;
+ if(n===0){setN(3);$('bg').value='#f1ede4';const W=FW*.74,H=W*1.2;for(let i=0;i<3;i++){const X=i*FW+(FW-W)/2,Y=(FH-H)/2;items.push(mkCell(X,Y,W,H,'polaroid',[-3,2,-2][i]),tape(i*FW+FW/2-170,Y-40,[-6,5,-4][i]))}}
+ else if(n===1){setN(4);$('bg').value='#101010';const W=FW*.84,H=FH*.7;for(let i=0;i<4;i++)items.push(mkCell(i*FW+(FW-W)/2,(FH-H)/2,W,H,'film',0))}
+ else if(n===2){setN(3);$('bg').value='#ffffff';[2,6,3].forEach((l,i)=>items.push(...gridCells(LAY[l],i)))}
+ else{setN(4);$('bg').value='#d8d2c4';const W=FW*.62,H=W*1.2;for(let i=0;i<5;i++){const X=(.2+i*.78)*FW,Y=(FH-H)/2+[-60,70,-30,80,-50][i];items.push(mkCell(X,Y,W,H,i%2?'stamp':'polaroid',[-5,4,-3,5,-4][i]),tape(X+W/2-170,Y-40,[-6,5,-4,6,-5][i]))}}
+ ctl();draw();$('msg').textContent='Tap + in a box to add a photo.'};
+LAY.forEach((L,i)=>{const b=document.createElement('button'),cv=document.createElement('canvas');cv.width=cv.height=56;b.setAttribute('aria-label','Grid layout '+(i+1));
+ const g=cv.getContext('2d');g.fillStyle='#8a8f9c';L.forEach(r=>g.fillRect(r[0]*56+2,r[1]*56+2,r[2]*56-4,r[3]*56-4));b.append(cv);
+ b.onclick=()=>{snap();items.push(...gridCells(L,curSlide()));sel=null;ctl();draw();$('msg').textContent='Tap + in a box to add a photo.'};$('grids').append(b)});
+FONTS.forEach((f,i)=>{const o=document.createElement('option');o.value=i;o.textContent=f[0];o.style.fontFamily=f[1];$('ff').append(o)});
+
+/* ---------- editing controls ---------- */
+$('un').onclick=undo;$('re').onclick=redo;
+$('del').onclick=()=>{snap();items=items.filter(t=>t!==sel);sel=null;ctl();draw()};
+$('dup').onclick=()=>{snap();const t={...sel,adj:{...sel.adj},x:sel.x+40,y:sel.y+40};items.push(t);sel=t;ctl();draw()};
+$('lk').onclick=()=>{snap();sel.lock=!sel.lock;ctl();draw()};
+$('fwd').onclick=()=>{snap();items=items.filter(t=>t!==sel);items.push(sel);draw()};
+$('bk').onclick=()=>{snap();items=items.filter(t=>t!==sel);items.unshift(sel);draw()};
+$('fw').onclick=()=>{snap();const f=Math.min(N-1,Math.max(0,Math.floor((sel.x+sel.w/2)/FW)));sel.rot=0;resize(sel,FW);sel.x=f*FW;sel.base=sel.w;draw()};
+$('fh').onclick=()=>{snap();sel.rot=0;resize(sel,FH*sel.w/sel.h);sel.base=sel.w;draw()};
+$('sp').onclick=()=>{snap();const f=Math.min(N-2,Math.max(0,Math.floor((sel.x+sel.w/2)/FW)));sel.rot=0;resize(sel,FW*2);sel.x=f*FW;sel.base=sel.w;draw()};
+$('sz').oninput=e=>{if(!sel)return;resize(sel,sel.base*e.target.value/100);draw()};
+$('zm').oninput=e=>{if(sel){sel.z=e.target.value/100;draw()}};
+$('adjb').onclick=()=>startAdj(sel);
+$('ft').onclick=()=>{snap();sel.fit=!sel.fit;ctl();draw()};
+$('rot').oninput=e=>{if(!sel)return;sel.rot=+e.target.value;draw()};
+['b','ct','sa'].forEach((id,i)=>$(id).oninput=e=>{if(!sel)return;sel.adj['bcs'[i]]=+e.target.value;if(!pend){pend=1;requestAnimationFrame(()=>{pend=0;if(sel){applyAdj(sel);draw()}})}});
+$('rst').onclick=()=>{snap();sel.adj={b:0,c:0,s:0};sel.cache=null;sel.z=1;sel.px=0;sel.py=0;sel.fit=false;ctl();draw()};
+$('nudge').onclick=e=>{const d=e.target.dataset.d;if(!d||!sel)return;snap();const k=8;if(d==='l')sel.x-=k;if(d==='r')sel.x+=k;if(d==='u')sel.y-=k;if(d==='d')sel.y+=k;draw()};
+$('frames').onclick=e=>{const b=e.target.closest('button[data-f]');if(!b||!sel)return;snap();sel.frame=b.dataset.f;ctl();draw()};
+$('tx').oninput=e=>{if(sel&&sel.k==='text'){setText(sel,{text:e.target.value});draw()}};
+$('ff').onchange=e=>{if(sel&&sel.k==='text'){snap();setText(sel,{fi:+e.target.value,font:FONTS[e.target.value][1]});draw()}};
+$('tc').oninput=e=>{if(sel&&sel.k==='text'){sel.color=e.target.value;draw()}};
+$('ts').oninput=e=>{if(sel&&sel.k==='text'){setText(sel,{size:+e.target.value});draw()}};
+$('sc').oninput=e=>{if(sel&&sel.k==='st'){sel.col=e.target.value;draw()}};
+document.querySelectorAll('input[type=range]:not(#az)').forEach(r=>r.addEventListener('pointerdown',snap));
+['tx','tc','sc','bg'].forEach(i=>$(i).addEventListener('focus',snap));
+$('n').onchange=e=>setN(+e.target.value);
 $('r').onchange=e=>{FH=+e.target.value;setup()};
 $('bg').oninput=()=>draw();
+$('tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#tabs button').forEach(z=>z.setAttribute('aria-selected',z===b));document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('on',i==b.dataset.t))};
 
-/* ---- crop ---- */
+/* ---------- crop ---------- */
 const dlg=$('dlg'),cv=$('cc'),cx=cv.getContext('2d');let cs=1,cr,R=0,cd=null,IW,IH;
 function chip(v){document.querySelectorAll('#chips button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r==v))}
-$('crop').onclick=()=>{const im=sel.img;IW=im.naturalWidth;IH=im.naturalHeight;
- cs=Math.min(innerWidth*.86/IW,innerHeight*.5/IH);cv.width=Math.round(IW*cs);cv.height=Math.round(IH*cs);
+$('crop').onclick=()=>{const im=sel.img;IW=im.naturalWidth;IH=im.naturalHeight;cs=Math.min(innerWidth*.86/IW,innerHeight*.5/IH);cv.width=Math.round(IW*cs);cv.height=Math.round(IH*cs);
  cr={x:sel.sx,y:sel.sy,w:sel.sw,h:sel.sh};R=0;chip(0);dlg.showModal();cdraw()};
-function cdraw(){const W=cv.width,H=cv.height,im=sel.img;cx.clearRect(0,0,W,H);cx.drawImage(im,0,0,W,H);
- cx.fillStyle='rgba(0,0,0,.55)';cx.fillRect(0,0,W,H);
+function corners(){return[[cr.x,cr.y],[cr.x+cr.w,cr.y],[cr.x,cr.y+cr.h],[cr.x+cr.w,cr.y+cr.h]]}
+function cdraw(){const W=cv.width,H=cv.height,im=sel.img;cx.clearRect(0,0,W,H);cx.drawImage(im,0,0,W,H);cx.fillStyle='rgba(0,0,0,.55)';cx.fillRect(0,0,W,H);
  cx.drawImage(im,cr.x,cr.y,cr.w,cr.h,cr.x*cs,cr.y*cs,cr.w*cs,cr.h*cs);
  const X=cr.x*cs,Y=cr.y*cs,w=cr.w*cs,h=cr.h*cs;cx.strokeStyle='#fff';cx.lineWidth=2;cx.strokeRect(X,Y,w,h);
  cx.lineWidth=1;cx.globalAlpha=.5;for(let i=1;i<3;i++){cx.beginPath();cx.moveTo(X+w*i/3,Y);cx.lineTo(X+w*i/3,Y+h);cx.moveTo(X,Y+h*i/3);cx.lineTo(X+w,Y+h*i/3);cx.stroke()}
  cx.globalAlpha=1;cx.fillStyle='#2f5bff';for(const[a,b]of corners())cx.fillRect(a*cs-8,b*cs-8,16,16)}
-function corners(){return[[cr.x,cr.y],[cr.x+cr.w,cr.y],[cr.x,cr.y+cr.h],[cr.x+cr.w,cr.y+cr.h]]}
 function setRatio(v){chip(v);R=v==='o'?IW/IH:+v;if(!R)return;let w=IW,h=w/R;if(h>IH){h=IH;w=h*R}cr={x:(IW-w)/2,y:(IH-h)/2,w,h};cdraw()}
 $('chips').onclick=e=>{const b=e.target.closest('button');if(b)setRatio(b.dataset.r)};
-cv.addEventListener('pointerdown',e=>{const p=pos(e,cv);p.x/=cs;p.y/=cs;cv.setPointerCapture(e.pointerId);
- const cs_=corners();for(let i=0;i<4;i++){if(Math.hypot(cs_[i][0]-p.x,cs_[i][1]-p.y)*cs<28){const o=cs_[3-i];cd={m:'r',ax:o[0],ay:o[1]};return}}
+cv.addEventListener('pointerdown',e=>{const p=pos(e,cv);p.x/=cs;p.y/=cs;cv.setPointerCapture(e.pointerId);const k=corners();
+ for(let i=0;i<4;i++)if(Math.hypot(k[i][0]-p.x,k[i][1]-p.y)*cs<28){const o=k[3-i];cd={m:'r',ax:o[0],ay:o[1]};return}
  if(p.x>=cr.x&&p.x<=cr.x+cr.w&&p.y>=cr.y&&p.y<=cr.y+cr.h)cd={m:'m',dx:p.x-cr.x,dy:p.y-cr.y}});
 cv.addEventListener('pointermove',e=>{if(!cd)return;const p=pos(e,cv);p.x/=cs;p.y/=cs;
  if(cd.m==='m'){cr.x=Math.max(0,Math.min(IW-cr.w,p.x-cd.dx));cr.y=Math.max(0,Math.min(IH-cr.h,p.y-cd.dy))}
- else{const sx=p.x<cd.ax?-1:1,sy=p.y<cd.ay?-1:1,mw=sx>0?IW-cd.ax:cd.ax,mh=sy>0?IH-cd.ay:cd.ay;
-  let w=Math.abs(p.x-cd.ax),h=Math.abs(p.y-cd.ay);
+ else{const sx=p.x<cd.ax?-1:1,sy=p.y<cd.ay?-1:1,mw=sx>0?IW-cd.ax:cd.ax,mh=sy>0?IH-cd.ay:cd.ay;let w=Math.abs(p.x-cd.ax),h=Math.abs(p.y-cd.ay);
   if(R){if(w/R>h)h=w/R;else w=h*R;const k=Math.min(1,mw/w,mh/h);w*=k;h*=k}else{w=Math.min(w,mw);h=Math.min(h,mh)}
   w=Math.max(40,w);h=Math.max(40,h);cr={x:sx>0?cd.ax:cd.ax-w,y:sy>0?cd.ay:cd.ay-h,w,h}}
  cdraw()});
 cv.addEventListener('pointerup',()=>cd=null);
 $('creset').onclick=()=>{cr={x:0,y:0,w:IW,h:IH};R=0;chip(0);cdraw()};
 $('ccancel').onclick=()=>dlg.close();
-$('capply').onclick=()=>{const t=sel,cxm=t.x+t.w/2,cym=t.y+t.h/2;t.sx=cr.x;t.sy=cr.y;t.sw=cr.w;t.sh=cr.h;
- t.h=t.w*cr.h/cr.w;t.x=cxm-t.w/2;t.y=cym-t.h/2;t.base=t.w;dlg.close();ctl();draw()};
+$('capply').onclick=()=>{snap();const t=sel,cxm=t.x+t.w/2,cym=t.y+t.h/2;if(t.k==='img')t.h*=(cr.h/cr.w)/(t.sh/t.sw);
+ t.sx=cr.x;t.sy=cr.y;t.sw=cr.w;t.sh=cr.h;t.x=cxm-t.w/2;t.y=cym-t.h/2;t.base=t.w;dlg.close();ctl();draw()};
 
-/* ---- export ---- */
-const st=$('stage'),delay=ms=>new Promise(r=>setTimeout(r,ms));
-let dl=null;(window.claude&&claude.use?claude.use('downloads'):Promise.resolve(null)).then(d=>{dl=d}).catch(()=>{});
-async function save(i){if(dl){await dl.save({filename:'slide-'+(i+1)+'.png',data:blobs[i]});return}
- const a=document.createElement('a');a.href=URL.createObjectURL(blobs[i]);a.download='slide-'+(i+1)+'.png';document.body.append(a);a.click();a.remove()}
-function canShare(){return !!(navigator.canShare&&navigator.canShare({files:[new File([blobs[0]],'a.png',{type:'image/png'})]}))}
-async function build(){sel=null;ctl();const S=+$('q').value,out=$('out');out.innerHTML='';blobs=[];
+/* ---------- export ---------- */
+async function save(i){const a=document.createElement('a');a.href=URL.createObjectURL(blobs[i]);a.download='slide-'+(i+1)+'.png';document.body.append(a);a.click();a.remove()}
+async function build(){sel=null;ctl();draw();const S=+$('q').value,out=$('out');out.innerHTML='';blobs=[];
  if(!items.length){out.textContent='Add at least one photo first.';return false}
- for(let i=0;i<N;i++){const t=document.createElement('canvas');t.width=FW*S;t.height=FH*S;
-  const g=t.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-  g.fillStyle=$('bg').value;g.fillRect(0,0,t.width,t.height);g.setTransform(S,0,0,S,-i*FW*S,0);
-  for(const m of items)g.drawImage(m.img,m.sx,m.sy,m.sw,m.sh,m.x,m.y,m.w,m.h);
+ SS=S;
+ for(let i=0;i<N;i++){const t=document.createElement('canvas');t.width=FW*S;t.height=FH*S;const g=t.getContext('2d');g.imageSmoothingQuality='high';
+  g.setTransform(S,0,0,S,-i*FW*S,0);drawAll(g,true);
   const b=await new Promise(r=>t.toBlob(r,'image/png'));blobs.push(b);
-  const fig=document.createElement('figure'),im=new Image();im.src=t.toDataURL('image/png');im.alt='Slide '+(i+1);
-  const cap=document.createElement('figcaption'),bt=document.createElement('button');bt.textContent='Save slide '+(i+1);bt.onclick=()=>save(i).catch(()=>{});
-  cap.append(bt);fig.append(im,cap);out.append(fig)}
- draw();dirty=false;$('shr').hidden=!canShare();return true}
+  const fig=document.createElement('figure'),im=new Image();im.src=URL.createObjectURL(b);im.alt='Slide '+(i+1);
+  const cap=document.createElement('figcaption'),bt=document.createElement('button');bt.textContent='Save slide '+(i+1);bt.onclick=()=>save(i);cap.append(bt);fig.append(im,cap);out.append(fig)}
+ SS=1;draw();dirty=false;$('msg').textContent='Tap Save under a slide, or press and hold a slide to add it to your photos.';return true}
 $('exp').onclick=async()=>{if(await build())$('out').scrollIntoView({behavior:'smooth'})};
-$('all').onclick=async()=>{const S=+$('q').value;if(dirty||!blobs.length){if(!await build())return}
- try{for(let i=0;i<blobs.length;i++){await save(i);await delay(150)}}catch(e){$('msg').textContent=e&&e.code==='declined'?'Saving cancelled.':'Couldn’t save the slides here.';return}
- $('msg').textContent='Saved '+N+' slides as PNG, '+FW*S+'×'+(FH*S)+' px each, with no compression loss. On iPhone, use Save to Photos / Share to put them in your Photos app.'};
-$('shr').onclick=async()=>{if(dirty||!blobs.length){if(!await build())return}
- navigator.share({files:blobs.map((b,i)=>new File([b],'slide-'+(i+1)+'.png',{type:'image/png'}))}).catch(()=>{})};
-/* ---- slide navigation ---- */
+/* ---------- slide navigation ---------- */
 function sw(){return c.getBoundingClientRect().width/N}
-function ind(){$('ind').textContent='Slide '+Math.min(N,Math.round(st.scrollLeft/sw())+1)+' of '+N}
-st.addEventListener('scroll',ind);
+function updInd(){$('ind').textContent='Slide '+(curSlide()+1)+' of '+N}
+st.addEventListener('scroll',updInd);
 $('prev').onclick=()=>st.scrollBy({left:-sw(),behavior:'smooth'});
 $('next').onclick=()=>st.scrollBy({left:sw(),behavior:'smooth'});
-$('n').addEventListener('change',()=>{st.scrollLeft=0;ind()});
-setup();ind();
+if(document.fonts){FONTS.forEach(f=>document.fonts.load('40px '+f[1]).catch(()=>{}));document.fonts.addEventListener('loadingdone',()=>{items.forEach(t=>t.k==='text'&&setText(t,{}));draw()})}
+setup();
 </script>
 </body>
 </html>
